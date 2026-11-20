@@ -52,3 +52,11 @@ El SHA-256 debe corresponder al contenido real descargado. Cada archivo debe dis
 3. Portadas, skin real y catálogo de modpacks.
 4. Integrar ZIPs/exportaciones de CurseForge respetando licencias.
 5. Pruebas completas de instalación y ejecución en Windows.
+
+## Inicio de sesión directo Microsoft (v0.9.0)
+
+Se ha implementado OAuth 2.0 Authorization Code + PKCE con navegador oficial de Microsoft y retorno automático a la aplicación. Ya no se necesita introducir códigos de dispositivo ni el Client ID en cada PC. Una vez validado el perfil de Minecraft Java, se muestra el nombre y la cabeza de la skin con su UUID. El inicio de Minecraft con JUGAR sigue pendiente.
+
+**Configuración obligatoria del administrador (una sola vez):** registrar una aplicación pública en Microsoft Entra con soporte para **cuentas personales de Microsoft**, agregar el redirect URI `http://localhost` bajo *Mobile and desktop applications*, y conseguir autorización para Minecraft Services. Configurar la variable de repositorio de GitHub Actions `UMBRAL_MICROSOFT_CLIENT_ID` con el Application (client) ID de esa aplicación. El workflow incrusta el ID público en `src/microsoft-app.json` al compilar, sin pedir datos a los jugadores. Si la variable no está configurada, la aplicación muestra un error informativo en lugar de simular que la sesión funciona.
+
+No se almacenan contraseñas. Los tokens de actualización se guardan cifrados cuando Electron safeStorage está disponible. **No se ha realizado una prueba de autenticación de extremo a extremo:** un client ID sin la autorización necesaria puede recibir HTTP 403 de Minecraft Services. No usar credenciales de otra aplicación ni eludir controles de Microsoft.
