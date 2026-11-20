@@ -50,12 +50,11 @@ function showProfile(profile){
 }
 $('account').addEventListener('click',async()=>{
  if(minecraftUser){show('settings');notice('La cuenta está conectada. Puedes cerrar sesión desde Ajustes.');return}
- const clientId=$('microsoftClientId').value.trim();
- if(!/^[a-f0-9-]{36}$/i.test(clientId)){show('settings');notice('Introduce primero el Client ID de tu aplicación Microsoft aprobada.');return}
+
  $('account').disabled=true;$('authCode').textContent='';$('authDialog').classList.remove('hidden');
  $('authInstructions').textContent='Abriendo Microsoft en el navegador. Copia el código cuando aparezca.';
  try{
-  const profile=await window.umbral.login(clientId);showProfile(profile);
+  const profile=await window.umbral.login();showProfile(profile);
   $('authDialog').classList.add('hidden');notice('Conectado como '+profile.username);
  }catch(e){$('authInstructions').textContent='Error: '+e.message;notice('Error de Microsoft: '+e.message)}
  finally{$('account').disabled=false}
@@ -96,9 +95,7 @@ window.umbral.onProgress(p=>{
  if(p.message)notice(p.message);
  $('bar').style.width=Math.max(0,Math.min(100,Number(p.percent)||0))+'%';
 });
-$('microsoftClientId').value=localStorage.getItem('umbral-microsoft-client-id')||'';
-$('microsoftClientId').addEventListener('change',()=>localStorage.setItem('umbral-microsoft-client-id',$('microsoftClientId').value.trim()));
 window.umbral.profile().then(result=>{
- if(result){showProfile(result.profile);$('microsoftClientId').value=result.clientId||$('microsoftClientId').value}
+ if(result)showProfile(result.profile)
 }).catch(e=>notice('No se pudo cargar la cuenta: '+e.message));
 window.umbral.settings().then(s=>{state=s;render();notice('Umbral preparado. Selecciona un modpack.');}).catch(e=>notice('Error: '+e.message));
