@@ -22,6 +22,13 @@ jobs:
           node-version: '22'
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
+      - name: Configurar identidad Microsoft de Umbral
+        shell: pwsh
+        env:
+          UMBRAL_CLIENT_ID: ${{ vars.UMBRAL_MICROSOFT_CLIENT_ID }}
+        run: |
+          $config = @{ clientId = $env:UMBRAL_CLIENT_ID } | ConvertTo-Json
+          Set-Content -Path 'src/microsoft-app.json' -Value $config -Encoding utf8
       - name: Revisar JavaScript
         run: npm run check
       - name: Compilar para Windows
