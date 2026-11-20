@@ -1,23 +1,61 @@
 'use strict';
-let state=null;
-const $=(id)=>document.getElementById(id);
-const notice=(t)=>{$('status').textContent=t};
-const selected=()=>state.packs.find(p=>p.id===state.selectedId)||state.packs[0];
-function show(view){document.querySelectorAll('.page').forEach(el=>el.classList.toggle('show',el.id===view));document.querySelectorAll('nav button').forEach(el=>el.classList.toggle('active',el.dataset.view===view))}
+let state=null, syncing=false;
+const $=id=>document.getElementById(id);
+const current=()=>state?.packs.find(p=>p.id===state.selectedId)||state?.packs[0];
+const notice=text=>{$('status').textContent=text;$('notice').textContent=text};
+function show(name){
+ document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('hidden',el.id!==name));
+ document.querySelectorAll('button.nav[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name));
+}
 function render(){
- const p=selected();$('currentName').textContent=p.name;$('name').value=p.name;$('manifest').value=p.manifestUrl||'';$('mc').value=p.mcVersion||'1.20.1';$('loader').value=p.loaderType||'forge';$('ram').value=p.memoryGB||6;
- $('packCards').replaceChildren();
- state.packs.forEach(pack=>{let b=document.createElement('button');b.textContent=pack.name;const small=document.createElement('small');small.textContent=pack.mcVersion+' · '+pack.loaderType;b.append(small);b.addEventListener('click',async()=>{state.selectedId=pack.id;await persist();render();show('home')});$('packCards').append(b)});
+ const p=current();if(!p)return;
+ $('currentName').textContent=p.name;$('packCount').textContent=state.packs.length+' modpack(s)';
+ $('name').value=p.name;$('mc').value=p.mcVersion;$('loader').value=p.loaderType;
+ $('manifest').value=p.manifestUrl||'';$('ram').value=p.memoryGB||6;$('ramPack').value=p.memoryGB||6;
+ const cards=$('packCards');cards.replaceChildren();
+ for(const pack of state.packs){
+  const b=document.createElement('button');b.className='packcard'+(pack.id===state.selectedId?' selected':'');
+  const symbol=document.createElement('div');symbol.className='newsicon';symbol.textContent='⬡';
+  const title=document.createElement('strong');title.textContent=pack.name;
+  const extra=document.createElement('small');extra.textContent=pack.mcVersion+' · '+pack.loaderType+(pack.manifestUrl?' · Sincronizable':' · Sin configurar');
+  b.append(symbol,title,extra);b.addEventListener('click',async()=>{
+   state.selectedId=pack.id;try{await persist();render();show('home')}catch(e){notice('Error: '+e.message)}
+  });cards.append(b);
+ }
 }
 async function persist(){state=await window.umbral.save(state);}
+function capture(){
+ const p=current();p.name=$('name').value.trim();p.mcVersion=$('mc').value.trim();
+ p.loaderType=$('loader').value;p.manifestUrl=$('manifest').value.trim();
+ p.memoryGB=String($('ramPack').value);
+}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
 document.querySelectorAll('[data-win]').forEach(b=>b.addEventListener('click',()=>window.umbral.window(b.dataset.win)));
-$('account').addEventListener('click',()=>notice('El inicio de sesión Microsoft todavía no está disponible en esta versión de prueba.'));
-$('play').addEventListener('click',()=>notice('Minecraft aún no puede iniciarse desde esta versión. Primero debemos integrar y validar Microsoft y el motor del juego.'));
-$('update').addEventListener('click',async()=>{try{notice('Comprobando y descargando...');await window.umbral.sync(selected().id);notice('Archivos sincronizados. El inicio de Minecraft aún requiere la siguiente fase.')}catch(e){notice('Error: '+e.message)}});
-$('new').addEventListener('click',async()=>{state.packs.push({id:crypto.randomUUID(),name:'Nuevo modpack',manifestUrl:'',mcVersion:'1.20.1',loaderType:'forge',memoryGB:'6'});state.selectedId=state.packs.at(-1).id;await persist();render();show('packs')});
-$('save').addEventListener('click',async()=>{try{Object.assign(selected(),{name:$('name').value,manifestUrl:$('manifest').value,mcVersion:$('mc').value,loaderType:$('loader').value,memoryGB:String($('ram').value)});await persist();render();notice('Cambios guardados.');show('home')}catch(e){alert(e.message)}});
-$('saveSettings').addEventListener('click',async()=>{selected().memoryGB=String($('ram').value);try{await persist();alert('Ajustes guardados')}catch(e){alert(e.message)}});
-$('folder').addEventListener('click',async()=>{try{await window.umbral.openFolder(selected().id)}catch(e){alert(e.message)}});
-window.umbral.onProgress(p=>{if(p.message)notice(p.message);$('bar').style.width=(p.percent||0)+'%'});
-window.umbral.settings().then(s=>{state=s;render()}).catch(e=>notice(e.message));
+$('quit').addEventListener('click',()=>window.umbral.window('close'));
+$('account').addEventListener('click',()=>notice('Microsoft aún no está conectado en esta versión de prueba.'));
+$('play').addEventListener('click',()=>notice('El inicio de Minecraft está pendiente: primero hay que validar Microsoft y el motor del juego.'));
+$('update').addEventListener('click',async()=>{
+ if(syncing)return;syncing=true;$('update').disabled=true;
+ try{notice('Comprobando archivos del modpack...');await window.umbral.sync(current().id);notice('Actualización completada. Inicio de Minecraft aún pendiente.')}
+ catch(e){notice('Error: '+e.message)}finally{syncing=false;$('update').disabled=false}
+});
+$('save').addEventListener('click',async()=>{
+ try{capture();await persist();render();show('home');notice('Configuración guardada.')}
+ catch(e){notice('Error: '+e.message)}
+});
+async function newPack(){
+ state.packs.push({id:crypto.randomUUID(),name:'Nuevo modpack',manifestUrl:'',mcVersion:'1.20.1',loaderType:'forge',memoryGB:'6'});
+ state.selectedId=state.packs.at(-1).id;await persist();render();show('packs');
+}
+$('new').addEventListener('click',()=>newPack().catch(e=>notice('Error: '+e.message)));
+$('libraryNew').addEventListener('click',()=>newPack().catch(e=>notice('Error: '+e.message)));
+$('folder').addEventListener('click',()=>window.umbral.openFolder(current().id).catch(e=>notice('Error: '+e.message)));
+$('saveSettings').addEventListener('click',async()=>{
+ current().memoryGB=String($('ram').value);
+ try{await persist();render();notice('Ajustes guardados.')}catch(e){notice('Error: '+e.message)}
+});
+window.umbral.onProgress(p=>{
+ if(p.message)notice(p.message);
+ $('bar').style.width=Math.max(0,Math.min(100,Number(p.percent)||0))+'%';
+});
+window.umbral.settings().then(s=>{state=s;render();notice('Umbral preparado. Selecciona un modpack.');}).catch(e=>notice('Error: '+e.message));
