@@ -1,6 +1,6 @@
 {
   "name": "umbral-launcher",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Launcher de escritorio para la comunidad Umbral",
   "main": "src/main.js",
