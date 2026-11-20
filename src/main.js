@@ -3,6 +3,7 @@ const {app,BrowserWindow,ipcMain,shell}=require('electron');
 const fs=require('node:fs');const path=require('node:path');
 const os=require('node:os');const crypto=require('node:crypto');
 const {pipeline}=require('node:stream/promises');const {Readable}=require('node:stream');
+const auth=require('./auth');
 let win;let working=false;
 const configFile=()=>path.join(app.getPath('userData'),'settings.json');
 const instanceDir=(id)=>path.join(app.getPath('userData'),'instances',id);
@@ -88,3 +89,13 @@ ipcMain.handle('pack:folder',async(_event,id)=>{
 ipcMain.handle('win:action',(_event,action)=>{
  if(action==='minimize')win.minimize();else if(action==='maximize'){if(win.isMaximized())win.unmaximize();else win.maximize()}else if(action==='close')win.close();
 });
+// Los tokens quedan en safeStorage (cifrado local) y nunca se envían al renderer.
+ipcMain.handle('auth:profile',async()=>{
+ const saved=auth.stored();if(!saved)return null;
+ return {profile:saved.profile,clientId:saved.clientId};
+});
+ipcMain.handle('auth:login',async(_event,clientId)=>{
+ const profile=await auth.login(clientId,event=>win?.webContents.send('auth:event',event));
+ win?.webContents.send('auth:event',{type:'profile',profile});return profile;
+});
+ipcMain.handle('auth:logout',async()=>{auth.logout();return true});
