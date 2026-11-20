@@ -1,0 +1,37 @@
+name: Compilar Umbral Launcher para Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/windows.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+      - name: Revisar JavaScript
+        run: npm run check
+      - name: Compilar para Windows
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist:win
+      - name: Publicar artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: Umbral-Launcher-Windows
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 30
