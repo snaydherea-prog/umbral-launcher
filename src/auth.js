@@ -82,7 +82,7 @@ async function login(emit){
     resolveCode(code);
    }catch(e){res.writeHead(400).end('Solicitud inválida.')}
   });
-  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'localhost',resolve)});
   const port=server.address().port;
   // Microsoft registers http://localhost for desktop public clients; the ephemeral port is dynamic.
   const redirectUri='http://localhost:'+port+'/';
