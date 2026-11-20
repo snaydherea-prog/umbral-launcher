@@ -1,83 +1,107 @@
 'use strict';
-// Flujo OAuth de código de dispositivo para cuentas Microsoft personales.
-// No solicita ni almacena contraseñas. Minecraft Services requiere aprobación del client ID.
-const {shell,safeStorage,app}=require('electron');
-const fs=require('node:fs');const path=require('node:path');
+// OAuth 2.0 Authorization Code + PKCE with system browser and local loopback.
+// Microsoft account passwords are NEVER handled by Umbral.
+const {app,safeStorage,shell}=require('electron');
+const crypto=require('node:crypto');
+const http=require('node:http');
+const fs=require('node:fs');
+const path=require('node:path');
 const LOGIN='https://login.microsoftonline.com/consumers/oauth2/v2.0';
-let inProgress=false;
+const scopes='XboxLive.signin offline_access';
 const sessionFile=()=>path.join(app.getPath('userData'),'microsoft-session.bin');
-const pause=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
-async function formRequest(url,form){
- const body=new URLSearchParams(form);
- const r=await fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body,signal:AbortSignal.timeout(30000)});
- const json=await r.json();if(!r.ok)throw Error(json.error_description||json.error||'Microsoft HTTP '+r.status);
- return json;
+let inProgress=false;
+const base64url=value=>Buffer.from(value).toString('base64url');
+function registeredId(){
+ const env=process.env.UMBRAL_MICROSOFT_CLIENT_ID||'';
+ let configured='';
+ try{configured=require('./microsoft-app.json').clientId||''}catch{}
+ const clientId=(env||configured).trim();
+ if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(clientId))
+  throw Error('El administrador debe configurar la aplicación Microsoft de Umbral antes de distribuir el launcher.');
+ return clientId;
 }
-async function jsonPost(url,data,headers={}){
- const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(data),signal:AbortSignal.timeout(30000)});
- const json=await r.json();if(!r.ok)throw Error(json.errorMessage||json.error||json.message||'Error HTTP '+r.status);
- return json;
+async function postForm(url,body){
+ const res=await fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(body),signal:AbortSignal.timeout(30000)});
+ const data=await res.json();
+ if(!res.ok)throw Error(data.error_description||data.error||'Error Microsoft HTTP '+res.status);
+ return data;
 }
-async function minecraftProfile(msToken){
- const xbl=await jsonPost('https://user.auth.xboxlive.com/user/authenticate',{Properties:{AuthMethod:'RPS',SiteName:'user.auth.xboxlive.com',RpsTicket:'d='+msToken},RelyingParty:'http://auth.xboxlive.com',TokenType:'JWT'});
- const xsts=await jsonPost('https://xsts.auth.xboxlive.com/xsts/authorize',{Properties:{SandboxId:'RETAIL',UserTokens:[xbl.Token]},RelyingParty:'rp://api.minecraftservices.com/',TokenType:'JWT'});
+async function postJson(url,body){
+ const res=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+ const data=await res.json();
+ if(!res.ok)throw Error(data.errorMessage||data.message||data.error||'HTTP '+res.status);
+ return data;
+}
+async function getMinecraftProfile(msToken){
+ const xbox=await postJson('https://user.auth.xboxlive.com/user/authenticate',{Properties:{AuthMethod:'RPS',SiteName:'user.auth.xboxlive.com',RpsTicket:'d='+msToken},RelyingParty:'http://auth.xboxlive.com',TokenType:'JWT'});
+ const xsts=await postJson('https://xsts.auth.xboxlive.com/xsts/authorize',{Properties:{SandboxId:'RETAIL',UserTokens:[xbox.Token]},RelyingParty:'rp://api.minecraftservices.com/',TokenType:'JWT'});
  const uhs=xsts.DisplayClaims?.xui?.[0]?.uhs;
- if(!uhs)throw Error('Xbox Live no devolvió identidad de usuario');
- const mc=await jsonPost('https://api.minecraftservices.com/authentication/login_with_xbox',{identityToken:'XBL3.0 x='+uhs+';'+xsts.Token});
+ if(!uhs)throw Error('No se pudo obtener el usuario Xbox.');
+ const mc=await postJson('https://api.minecraftservices.com/authentication/login_with_xbox',{identityToken:'XBL3.0 x='+uhs+';'+xsts.Token});
  const response=await fetch('https://api.minecraftservices.com/minecraft/profile',{headers:{authorization:'Bearer '+mc.access_token},signal:AbortSignal.timeout(30000)});
- if(response.status===403)throw Error('Minecraft Services rechazó esta aplicación (403). Se necesita autorización del Client ID.');
- if(response.status===404)throw Error('La cuenta Microsoft no tiene un perfil activo de Minecraft Java.');
- if(!response.ok)throw Error('Error consultando el perfil de Minecraft: '+response.status);
+ if(response.status===403)throw Error('Minecraft Services rechazó la aplicación (403). La aplicación debe estar autorizada.');
+ if(response.status===404)throw Error('Esta cuenta no tiene un perfil de Minecraft Java.');
+ if(!response.ok)throw Error('Minecraft devolvió HTTP '+response.status);
  const profile=await response.json();
- if(!/^[0-9a-f-]{32,36}$/i.test(profile.id)||!profile.name)throw Error('Minecraft devolvió un perfil inválido');
+ if(!/^[0-9a-f-]{32,36}$/i.test(profile.id)||typeof profile.name!=='string')throw Error('Perfil de Minecraft inválido');
  return {uuid:profile.id.replace(/-/g,''),username:profile.name};
 }
 function saveSession(clientId,refreshToken,profile){
- if(!safeStorage.isEncryptionAvailable())return false;
- const payload=JSON.stringify({clientId,refreshToken,profile});
+ if(!safeStorage.isEncryptionAvailable()||!refreshToken)return false;
  fs.mkdirSync(path.dirname(sessionFile()),{recursive:true});
- fs.writeFileSync(sessionFile(),safeStorage.encryptString(payload),{mode:0o600});
+ fs.writeFileSync(sessionFile(),safeStorage.encryptString(JSON.stringify({clientId,refreshToken,profile})),{mode:0o600});
  return true;
 }
-function stored(){
+function stored(){try{
+ if(!safeStorage.isEncryptionAvailable())return null;
+ const s=JSON.parse(safeStorage.decryptString(fs.readFileSync(sessionFile())));
+ return s?.profile||null;
+}catch{return null}}
+async function login(emit){
+ if(inProgress)throw Error('Ya hay un inicio de sesión en curso.');
+ const clientId=registeredId();inProgress=true;
+ let server;let timeout;
  try{
-  if(!safeStorage.isEncryptionAvailable())return null;
-  return JSON.parse(safeStorage.decryptString(fs.readFileSync(sessionFile())));
- }catch{return null}
-}
-async function renew(){
- const prev=stored();if(!prev?.clientId||!prev.refreshToken)return null;
- try{
-  const token=await formRequest(LOGIN+'/token',{client_id:prev.clientId,scope:'XboxLive.signin offline_access',grant_type:'refresh_token',refresh_token:prev.refreshToken});
-  const profile=await minecraftProfile(token.access_token);
-  saveSession(prev.clientId,token.refresh_token||prev.refreshToken,profile);
+  const verifier=base64url(crypto.randomBytes(48));
+  const challenge=base64url(crypto.createHash('sha256').update(verifier).digest());
+  const state=base64url(crypto.randomBytes(24));
+  let resolveCode,rejectCode;
+  const codePromise=new Promise((resolve,reject)=>{resolveCode=resolve;rejectCode=reject});
+  server=http.createServer((req,res)=>{
+   try{
+    const incoming=new URL(req.url,'http://localhost');
+    if(incoming.pathname!=='/'){res.writeHead(404).end();return}
+    if(incoming.searchParams.get('state')!==state){
+      res.writeHead(400,{'content-type':'text/plain; charset=utf-8'}).end('Estado OAuth inválido.');return;
+    }
+    const error=incoming.searchParams.get('error');
+    const code=incoming.searchParams.get('code');
+    if(error){res.writeHead(400,{'content-type':'text/plain; charset=utf-8'}).end('Autenticación cancelada.');rejectCode(Error('Microsoft canceló la autenticación.'));return}
+    if(!code){res.writeHead(400).end('Falta el código de autorización.');return}
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}).end('<!doctype html><html lang="es"><meta charset="utf-8"><title>Umbral</title><body style="font-family:sans-serif;background:#0b1328;color:#fff;padding:3rem"><h2>Sesión recibida</h2><p>Ya puedes volver a Umbral Launcher.</p></body></html>');
+    resolveCode(code);
+   }catch(e){res.writeHead(400).end('Solicitud inválida.')}
+  });
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
+  const port=server.address().port;
+  // Microsoft registers http://localhost for desktop public clients; the ephemeral port is dynamic.
+  const redirectUri='http://localhost:'+port+'/';
+  const url=new URL(LOGIN+'/authorize');
+  for(const [k,v] of Object.entries({client_id:clientId,response_type:'code',redirect_uri:redirectUri,response_mode:'query',scope:scopes,state,code_challenge:challenge,code_challenge_method:'S256'}))url.searchParams.set(k,v);
+  emit({type:'status',message:'Abriendo Microsoft en el navegador...'});
+  timeout=setTimeout(()=>rejectCode(Error('Tiempo de inicio de sesión agotado.')),180000);
+  await shell.openExternal(url.toString());
+  const code=await codePromise;
+  emit({type:'status',message:'Verificando la cuenta Microsoft y Minecraft Java...'});
+  const token=await postForm(LOGIN+'/token',{client_id:clientId,grant_type:'authorization_code',code,redirect_uri:redirectUri,code_verifier:verifier,scope:scopes});
+  const profile=await getMinecraftProfile(token.access_token);
+  saveSession(clientId,token.refresh_token,profile);
   return profile;
- }catch{return null}
-}
-async function login(clientId,emit){
- if(inProgress)throw Error('Ya hay un inicio de sesión en curso');
- if(!/^[a-f0-9-]{36}$/i.test(clientId))throw Error('Introduce un Client ID válido de Microsoft (UUID).');
- inProgress=true;
- try{
-  const challenge=await formRequest(LOGIN+'/devicecode',{client_id:clientId,scope:'XboxLive.signin offline_access'});
-  emit({type:'code',code:challenge.user_code,url:challenge.verification_uri});
-  await shell.openExternal(challenge.verification_uri);
-  const expiry=Date.now()+challenge.expires_in*1000;let interval=Math.max(5,challenge.interval||5);
-  while(Date.now()<expiry){
-   await pause(interval*1000);
-   const r=await fetch(LOGIN+'/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:device_code',client_id:clientId,device_code:challenge.device_code}),signal:AbortSignal.timeout(30000)});
-   const response=await r.json();
-   if(response.error==='authorization_pending')continue;
-   if(response.error==='slow_down'){interval+=5;continue}
-   if(!r.ok)throw Error(response.error_description||response.error||'Error de autenticación');
-   emit({type:'status',message:'Cuenta Microsoft autorizada. Verificando Minecraft Java...'});
-   const profile=await minecraftProfile(response.access_token);
-   const persisted=saveSession(clientId,response.refresh_token,profile);
-   emit({type:'status',message:persisted?'Minecraft conectado':'Minecraft conectado (la sesión no se conservará tras cerrar)'});
-   return profile;
-  }
-  throw Error('El código de Microsoft ha caducado. Vuelve a intentarlo.');
- }finally{inProgress=false}
+ }finally{
+  if(timeout)clearTimeout(timeout);
+  if(server)await new Promise(resolve=>server.close(()=>resolve()));
+  inProgress=false;
+ }
 }
 function logout(){try{fs.unlinkSync(sessionFile())}catch{}}
-module.exports={login,renew,logout,stored};
+module.exports={login,logout,stored};
