@@ -4,3 +4,5 @@
 .authdialog.hidden{display:none}.authpanel{max-width:480px;width:92%;background:#101d36;border:1px solid #4c72a8;border-radius:20px;box-shadow:0 22px 60px #000c;padding:30px}
 .authpanel h2{margin:0 0 10px}.authpanel p{line-height:1.6;color:#b8d3ef}.authcode{letter-spacing:5px;font-size:30px;font-weight:900;text-align:center;color:#8dddff;background:#091328;border:1px solid #395d8b;border-radius:12px;margin:20px 0;padding:20px}
 .authpanel button{margin-right:10px;margin-bottom:8px}
+
+.authcode.hidden,.authpanel button.hidden{display:none}
