@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "announcement": "Bienvenido a Umbral Launcher. El catálogo estará disponible cuando el administrador publique el primer modpack.",
+  "discordUrl": "https://discord.gg/PFMEcJ3Hq4",
+  "modpacks": [
+    {
+      "id": "keo-rpg-optimized",
+      "name": "KEO RPG Optimized",
+      "description": "RPG y aventura. Pendiente de publicación del modpack modificado de Umbral.",
+      "version": "Sin publicar",
+      "minecraftVersion": "1.20.1",
+      "loader": "forge",
+      "loaderVersion": "",
+      "javaMajor": 17,
+      "manifestUrl": "",
+      "featured": true,
+      "published": false,
+      "news": []
+    }
+  ]
+}
