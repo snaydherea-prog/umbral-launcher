@@ -98,3 +98,25 @@ ipcMain.handle('auth:login',async(_event,clientId)=>{
  win?.webContents.send('auth:event',{type:'profile',profile});return profile;
 });
 ipcMain.handle('auth:logout',async()=>{auth.logout();return true});
+
+
+const CATALOG_URL='https://raw.githubusercontent.com/snaydherea-prog/umbral-launcher/main/catalog/modpacks.json';
+let catalogCache=null;
+async function getPublishedCatalog(){
+ const response=await fetch(CATALOG_URL,{headers:{'accept':'application/json','cache-control':'no-cache'},signal:AbortSignal.timeout(15000)});
+ if(!response.ok)throw Error('No se pudo consultar el catálogo de Umbral: '+response.status);
+ const data=await response.json();
+ if(data.schemaVersion!==1||!Array.isArray(data.modpacks)||data.modpacks.length>100)throw Error('Formato de catálogo no válido');
+ const mods=data.modpacks.map(x=>{
+  if(typeof x.id!=='string'||!/^[a-z0-9-]{2,80}$/.test(x.id))throw Error('ID del catálogo inválido');
+  if(typeof x.name!=='string'||x.name.length>100)throw Error('Nombre inválido');
+  if(x.manifestUrl){const u=new URL(x.manifestUrl);if(u.protocol!=='https:')throw Error('URL del modpack no segura')}
+  return {id:x.id,name:x.name,description:String(x.description||''),version:String(x.version||''),minecraftVersion:String(x.minecraftVersion||''),loader:String(x.loader||''),loaderVersion:String(x.loaderVersion||''),javaMajor:Number(x.javaMajor)||17,manifestUrl:x.manifestUrl||'',featured:!!x.featured,published:!!x.published,news:Array.isArray(x.news)?x.news.slice(0,4):[]};
+ });
+ catalogCache={announcement:String(data.announcement||''),discordUrl:'https://discord.gg/PFMEcJ3Hq4',modpacks:mods};
+ return catalogCache;
+}
+ipcMain.handle('catalog:get',async()=>{
+ try{return await getPublishedCatalog()}
+ catch(error){if(catalogCache)return {...catalogCache,warning:'Usando catálogo en caché: '+error.message};throw error}
+});
