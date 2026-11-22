@@ -52,11 +52,28 @@ function saveSession(clientId,refreshToken,profile){
  fs.writeFileSync(sessionFile(),safeStorage.encryptString(JSON.stringify({clientId,refreshToken,profile})),{mode:0o600});
  return true;
 }
-function stored(){try{
+function readSession(){try{
  if(!safeStorage.isEncryptionAvailable())return null;
- const s=JSON.parse(safeStorage.decryptString(fs.readFileSync(sessionFile())));
- return s?.profile||null;
+ const session=JSON.parse(safeStorage.decryptString(fs.readFileSync(sessionFile())));
+ return session?.clientId&&session.refreshToken?session:null;
 }catch{return null}}
+function stored(){return readSession()?.profile||null}
+async function currentProfile(){
+ const saved=readSession();
+ if(!saved)return null;
+ try{
+  const clientId=registeredId();
+  if(saved.clientId!==clientId)throw Error('La identidad de la aplicación Microsoft ha cambiado.');
+  const token=await postForm(LOGIN+'/token',{client_id:clientId,grant_type:'refresh_token',refresh_token:saved.refreshToken,scope:scopes});
+  const profile=await getMinecraftProfile(token.access_token);
+  saveSession(clientId,token.refresh_token||saved.refreshToken,profile);
+  return profile;
+ }catch(e){
+  // Un perfil guardado no demuestra que la sesión actual siga siendo válida.
+  // No exponer un estado prémium verificado si no se pudo renovar/verificar.
+  return null;
+ }
+}
 async function login(emit){
  if(inProgress)throw Error('Ya hay un inicio de sesión en curso.');
  const clientId=registeredId();inProgress=true;
@@ -65,7 +82,7 @@ async function login(emit){
   const verifier=base64url(crypto.randomBytes(48));
   const challenge=base64url(crypto.createHash('sha256').update(verifier).digest());
   const state=base64url(crypto.randomBytes(24));
-  let resolveCode,rejectCode;
+  let resolveCode,rejectCode;let callbackReceived=false;
   const codePromise=new Promise((resolve,reject)=>{resolveCode=resolve;rejectCode=reject});
   server=http.createServer((req,res)=>{
    try{
@@ -74,15 +91,17 @@ async function login(emit){
     if(incoming.searchParams.get('state')!==state){
       res.writeHead(400,{'content-type':'text/plain; charset=utf-8'}).end('Estado OAuth inválido.');return;
     }
+    if(callbackReceived){res.writeHead(409).end('Este inicio de sesión ya se procesó.');return}
     const error=incoming.searchParams.get('error');
     const code=incoming.searchParams.get('code');
-    if(error){res.writeHead(400,{'content-type':'text/plain; charset=utf-8'}).end('Autenticación cancelada.');rejectCode(Error('Microsoft canceló la autenticación.'));return}
+    if(error){callbackReceived=true;res.writeHead(400,{'content-type':'text/plain; charset=utf-8'}).end('Autenticación cancelada.');rejectCode(Error('Microsoft canceló la autenticación.'));return}
     if(!code){res.writeHead(400).end('Falta el código de autorización.');return}
+    callbackReceived=true;
     res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}).end('<!doctype html><html lang="es"><meta charset="utf-8"><title>Umbral</title><body style="font-family:sans-serif;background:#0b1328;color:#fff;padding:3rem"><h2>Sesión recibida</h2><p>Ya puedes volver a Umbral Launcher.</p></body></html>');
     resolveCode(code);
    }catch(e){res.writeHead(400).end('Solicitud inválida.')}
   });
-  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'localhost',resolve)});
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
   const port=server.address().port;
   // Microsoft registers http://localhost for desktop public clients; the ephemeral port is dynamic.
   const redirectUri='http://localhost:'+port+'/';
@@ -99,9 +118,9 @@ async function login(emit){
   return profile;
  }finally{
   if(timeout)clearTimeout(timeout);
-  if(server)await new Promise(resolve=>server.close(()=>resolve()));
+  if(server){server.closeAllConnections?.();await new Promise(resolve=>server.close(()=>resolve()))}
   inProgress=false;
  }
 }
 function logout(){try{fs.unlinkSync(sessionFile())}catch{}}
-module.exports={login,logout,stored};
+module.exports={login,logout,stored,currentProfile};
