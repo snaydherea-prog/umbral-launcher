@@ -80,7 +80,7 @@ async function sync(id){
    try{
     const name=safeRelative(old.path);
     if(managed.has(name)||!/^[a-f0-9]{64}$/i.test(old.sha256))continue;
-    if(!/^(mods|config|defaultconfigs|resourcepacks|shaderpacks|kubejs)\\//.test(name))continue;
+    if(!['mods','config','defaultconfigs','resourcepacks','shaderpacks','kubejs'].includes(name.split('/')[0]))continue;
     const destination=path.join(root,...name.split('/'));
     if(fs.existsSync(destination)&&fs.lstatSync(destination).isFile()&&await hashFile(destination)===old.sha256.toLowerCase()){
      fs.unlinkSync(destination);
