@@ -21,7 +21,8 @@ function walk(dir){
   const relative=path.relative(root,abs).split(path.sep).join('/');
   const bytes=fs.readFileSync(abs);
   const sha256=crypto.createHash('sha256').update(bytes).digest('hex');
-  const url=base.toString().replace(/\\/$/,'')+'/'+relative.split('/').map(encodeURIComponent).join('/');
+  const prefix=base.toString().endsWith('/')?base.toString().slice(0,-1):base.toString();
+  const url=prefix+'/'+relative.split('/').map(encodeURIComponent).join('/');
   files.push({path:relative,url,sha256});
  }
 }
