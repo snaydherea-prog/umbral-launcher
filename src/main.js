@@ -124,3 +124,5 @@ ipcMain.handle('catalog:get',async()=>{
  try{return await getPublishedCatalog()}
  catch(error){if(catalogCache)return {...catalogCache,warning:'Usando catálogo en caché: '+error.message};throw error}
 });
+
+ipcMain.handle('discord:open',()=>shell.openExternal('https://discord.gg/PFMEcJ3Hq4'));
