@@ -6,3 +6,16 @@
 .authpanel button{margin-right:10px;margin-bottom:8px}
 
 .authcode.hidden,.authpanel button.hidden{display:none}
+
+/* Fase catálogo y perfil, siguiendo la composición de la referencia visual. */
+.statsbox{position:absolute;right:32px;top:110px;width:315px;background:#0b1329ec;border:1px solid #6a82ad;border-radius:17px;padding:18px 20px;box-shadow:0 17px 42px #0008;backdrop-filter:blur(14px)}
+.statsbox>b{display:block;font-size:17px;margin-bottom:12px}.statsbox p{display:flex;justify-content:space-between;gap:15px;margin:10px 0;font-size:12px;color:#a7b9d5}
+.statsbox strong{color:#f5f9ff;font-weight:750;text-align:right}.statsbox p:first-of-type strong{color:#65d8a3}
+#announcement{max-width:370px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile{max-width:345px}.profile>div:nth-child(2){min-width:0}.profile strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:135px}
+.profile #accountType{color:#87b6ed;font-size:9px}
+.hero{max-width:760px}.hero>h1{max-width:790px}
+#home .homecontent{padding-bottom:22px}
+#home .bottomrow{min-height:76px}
+#offlineName{max-width:280px}
+@media(max-width:1250px){.statsbox{top:104px;width:270px;padding:15px}.statsbox>b{font-size:14px}.hero h1{font-size:38px}.hero{max-width:630px}.bottomrow{margin-top:15px}.homecontent{padding:17px 22px 20px}}
