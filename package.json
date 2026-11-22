@@ -1,12 +1,12 @@
 {
   "name": "umbral-launcher",
-  "version": "1.0.0-preview.1",
+  "version": "1.0.0-preview.2",
   "private": true,
   "description": "Launcher de escritorio para la comunidad Umbral",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/auth.js",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never"
   },
   "devDependencies": {
