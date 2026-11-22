@@ -19,3 +19,5 @@
 #home .bottomrow{min-height:76px}
 #offlineName{max-width:280px}
 @media(max-width:1250px){.statsbox{top:104px;width:270px;padding:15px}.statsbox>b{font-size:14px}.hero h1{font-size:38px}.hero{max-width:630px}.bottomrow{margin-top:15px}.homecontent{padding:17px 22px 20px}}
+
+#adminEditor.hidden{display:none!important}
