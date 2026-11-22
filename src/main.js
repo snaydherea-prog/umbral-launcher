@@ -7,7 +7,7 @@ const auth=require('./auth');
 let win;let working=false;
 const configFile=()=>path.join(app.getPath('userData'),'settings.json');
 const instanceDir=(id)=>path.join(app.getPath('userData'),'instances',id);
-const defaultPack=()=>({id:crypto.randomUUID(),name:'KEO RPG Optimized',mcVersion:'1.20.1',loaderType:'forge',memoryGB:'6',manifestUrl:''});
+const defaultPack=()=>({id:crypto.randomUUID(),name:'KEO RPG Optimized',mcVersion:'1.20.1',loaderType:'forge',memoryGB:'6',manifestUrl:'',remoteId:'keo-rpg-optimized'});
 function getConfig(){
  let state=null;try{state=JSON.parse(fs.readFileSync(configFile(),'utf8'))}catch{}
  if(!state||!Array.isArray(state.packs))state={packs:[defaultPack()]};
@@ -24,10 +24,11 @@ function validateState(data){
   if(typeof p.mcVersion!=='string'||!/^[0-9a-zA-Z_.-]{1,40}$/.test(p.mcVersion))throw Error('Versión de Minecraft inválida');
   if(!['vanilla','forge','fabric','neoforge','quilt'].includes(p.loaderType))throw Error('Cargador de mods inválido');
   if(!/^(?:[2-9]|1[0-6])$/.test(String(p.memoryGB)))throw Error('RAM entre 2 y 16 GB');
+  if(p.remoteId&&!/^[a-z0-9-]{2,80}$/.test(p.remoteId))throw Error('ID remoto inválido');
   if(p.manifestUrl){const url=new URL(p.manifestUrl);if(url.protocol!=='https:'||url.username||url.password)throw Error('URL de manifiesto HTTPS inválida')}
  }
  if(!ids.has(data.selectedId))throw Error('Selección de modpack inválida');
- return {selectedId:data.selectedId,packs:data.packs.map(p=>({id:p.id,name:p.name.trim(),manifestUrl:p.manifestUrl||'',mcVersion:p.mcVersion,loaderType:p.loaderType,memoryGB:String(p.memoryGB)}))};
+ return {selectedId:data.selectedId,packs:data.packs.map(p=>({id:p.id,name:p.name.trim(),manifestUrl:p.manifestUrl||'',mcVersion:p.mcVersion,loaderType:p.loaderType,memoryGB:String(p.memoryGB),remoteId:p.remoteId||''}))};
 }
 const emit=(message,percent)=>win?.webContents.send('pack:progress',{message,percent});
 const hashFile=async f=>{const h=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(f))h.update(chunk);return h.digest('hex')};
@@ -40,12 +41,15 @@ async function downloadJson(url){
 async function sync(id){
  const pack=getConfig().packs.find(p=>p.id===id);
  if(!pack)throw Error('Modpack no encontrado');
- if(!pack.manifestUrl)throw Error('Falta configurar la URL HTTPS del manifiesto');
+ const catalog=await getPublishedCatalog();
+ const published=catalog.modpacks.find(x=>x.id===pack.remoteId&&x.published);
+ if(!published||!published.manifestUrl)throw Error('Este modpack todavía no ha sido publicado por el administrador de Umbral.');
+ const manifestUrl=published.manifestUrl;
  if(working)throw Error('Ya hay una descarga en curso');
  working=true;
  try{
   emit('Leyendo manifiesto...',1);
-  const manifest=await downloadJson(pack.manifestUrl);
+  const manifest=await downloadJson(manifestUrl);
   if(!manifest||!Array.isArray(manifest.files)||manifest.files.length>2000)throw Error('Manifiesto inválido');
   const root=instanceDir(pack.id);
   fs.mkdirSync(root,{recursive:true});
