@@ -114,9 +114,9 @@ ipcMain.handle('win:action',(_event,action)=>{
 });
 // Los tokens quedan en safeStorage (cifrado local) y nunca se envían al renderer.
 ipcMain.handle('auth:profile',async()=>{
- const profile=auth.stored();return profile?{profile}:null;
+ const profile=await auth.currentProfile();return profile?{profile}:null;
 });
-ipcMain.handle('auth:login',async(_event,clientId)=>{
+ipcMain.handle('auth:login',async()=>{
  const profile=await auth.login(event=>win?.webContents.send('auth:event',event));
  win?.webContents.send('auth:event',{type:'profile',profile});return profile;
 });
