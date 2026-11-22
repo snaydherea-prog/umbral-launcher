@@ -134,7 +134,7 @@ async function getPublishedCatalog(){
   if(typeof x.id!=='string'||!/^[a-z0-9-]{2,80}$/.test(x.id))throw Error('ID del catálogo inválido');
   if(typeof x.name!=='string'||x.name.length>100)throw Error('Nombre inválido');
   if(x.manifestUrl){const u=new URL(x.manifestUrl);if(u.protocol!=='https:')throw Error('URL del modpack no segura')}
-  return {id:x.id,name:x.name,description:String(x.description||''),version:String(x.version||''),minecraftVersion:String(x.minecraftVersion||''),loader:String(x.loader||''),loaderVersion:String(x.loaderVersion||''),javaMajor:Number(x.javaMajor)||17,manifestUrl:x.manifestUrl||'',featured:!!x.featured,published:!!x.published,news:Array.isArray(x.news)?x.news.slice(0,4):[]};
+  return {id:x.id,name:x.name,description:String(x.description||''),version:String(x.version||''),minecraftVersion:String(x.minecraftVersion||''),loader:String(x.loader||''),loaderVersion:String(x.loaderVersion||''),javaMajor:Number(x.javaMajor)||17,modsCount:Number.isInteger(x.modsCount)?x.modsCount:null,manifestUrl:x.manifestUrl||'',featured:!!x.featured,published:!!x.published,news:Array.isArray(x.news)?x.news.slice(0,4):[]};
  });
  catalogCache={announcement:String(data.announcement||''),discordUrl:'https://discord.gg/PFMEcJ3Hq4',modpacks:mods};
  return catalogCache;
