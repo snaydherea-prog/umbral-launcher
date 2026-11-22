@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('umbral',{
   login:(clientId)=>ipcRenderer.invoke('auth:login',clientId),
   logout:()=>ipcRenderer.invoke('auth:logout'),
   onAuth:(fn)=>{const h=(_e,p)=>fn(p);ipcRenderer.on('auth:event',h);return()=>ipcRenderer.removeListener('auth:event',h)},
+  catalog:()=>ipcRenderer.invoke('catalog:get'),
   settings:()=>ipcRenderer.invoke('settings:get'),
   save:(x)=>ipcRenderer.invoke('settings:save',x),
   sync:(id)=>ipcRenderer.invoke('pack:sync',id),
