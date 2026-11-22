@@ -1,62 +1,49 @@
-# Umbral Launcher v0.7.0
+# Umbral Launcher — 1.0.0-preview
 
-Aplicación de escritorio Windows para la comunidad **Umbral**, construida con Electron.
+Aplicación **Electron para Windows** de la comunidad Umbral. Diseño oscuro inspirado en el mockup proporcionado por el administrador, con biblioteca, Discord, perfil, estadísticas y sincronización de archivos.
 
-## Estado actual
+**Estado:** vista previa de desarrollo. **No es todavía un launcher capaz de instalar o ejecutar Minecraft.** JUGAR indica esta limitación de forma explícita. Se necesita integrar y probar el motor Java, los cargadores de mods y la autenticación oficial antes de compartirlo como launcher jugable.
 
-- Aplicación Windows con interfaz propia, temática oscura y secciones Inicio / Biblioteca / Modpacks / Ajustes.
-- Múltiples modpacks, configuraciones separadas y carpetas por instancia.
-- Sincronización desde un manifiesto HTTPS y verificación SHA-256.
-- Compilación de instalador NSIS y versión portable mediante GitHub Actions.
+## Instalador de Windows
 
-**Esta versión es un prototipo funcional de interfaz y sincronización, no un launcher jugable aún.** El botón JUGAR muestra un aviso. Todavía faltan y deben validarse la autenticación Microsoft/Minecraft, instalación de Java, descarga del juego y configuración e inicio reales de Forge/Fabric/NeoForge. No compartas esta edición como launcher terminado.
+GitHub Actions compila un instalador NSIS y un ejecutable portátil con Electron Builder. Abre la pestaña **Actions**, elige la ejecución verde más reciente y descarga el artefacto `Umbral-Launcher-Windows`. No necesitas Node.js en las computadoras de tus miembros.
 
-## Compilar ejecutables sin Node.js en tu PC
+## Catálogo administrado (solo administrador)
 
-1. Abre [Actions](https://github.com/snaydherea-prog/umbral-launcher/actions).
-2. Selecciona **Compilar Umbral Launcher para Windows**.
-3. Si no se ha ejecutado por el último push, pulsa **Run workflow** y selecciona **main**.
-4. Espera el resultado de GitHub; si la ejecución termina en verde, abre el run.
-5. Abajo, en **Artifacts**, descarga **Umbral-Launcher-Windows**, descomprime el ZIP y ejecuta el archivo de instalación .exe. GitHub Actions puede requerir habilitar workflows para repositorios recién creados.
+El catálogo público está en [catalog/modpacks.json](catalog/modpacks.json). **Los miembros no pueden publicar modpacks desde el launcher.** Solo los colaboradores con permisos de escritura en GitHub pueden modificar ese archivo.
 
-Si hay una X roja, revisa los logs de la ejecución; el instalador no se considera generado hasta que aparezca el artefacto.
+Para publicar:
 
-## Ejecutar en desarrollo
+1. Prepara un modpack compatible con Minecraft y su cargador (Forge/Fabric/NeoForge/Quilt).
+2. Hospeda los archivos autorizados en enlaces HTTPS con descargas directas.
+3. En una computadora de administración, ejecuta `node tools/generar-manifiesto.mjs "C:\\ruta\\modpack" "https://ejemplo.com/archivos" "1.0.0"` para generar `manifest.json`. Se incluyen `mods`, `config`, `defaultconfigs`, `resourcepacks`, `shaderpacks` y `kubejs`.
+4. Sube el manifiesto a un lugar público HTTPS y comprueba que cada URL de archivo coincide con el archivo real.
+5. Edita `catalog/modpacks.json`: completa `manifestUrl`, `minecraftVersion`, `loader`, `loaderVersion`, `version` y establece `published: true`.
+6. Los usuarios abren el launcher y seleccionan **DESCARGAR / ACTUALIZAR**. El sistema verifica hashes SHA-256. Los archivos obsoletos gestionados por Umbral se retiran si no han sido modificados. Nunca se deben incluir mundos, datos de cuenta ni archivos personales en el manifiesto.
 
-```powershell
-npm install
-npm start
-```
+No redistribuyas mods ni archivos de Minecraft sin verificar los permisos de sus autores. Las referencias a archivos de Minecraft deben obtenerse de fuentes autorizadas.
 
-## Formato de manifiesto HTTPS
+## Cuentas y perfiles
 
-```json
-{
-  "version": "1.0.0",
-  "files": [
-    {
-      "path": "mods/ejemplo.jar",
-      "url": "https://servidor.example/mods/ejemplo.jar",
-      "sha256": "64 caracteres hexadecimales del hash SHA-256"
-    }
-  ]
-}
-```
+- **Microsoft:** OAuth 2.0 PKCE con navegador del sistema. Necesita una aplicación Microsoft Entra configurada y autorización para Minecraft Services. Hasta entonces puede fallar; no está probada de extremo a extremo. La skin y el nombre se muestran solo si Minecraft devuelve un perfil válido.
+- **Perfil local:** permite configurar un nombre de 3 a 16 caracteres para la interfaz, pero **no verifica propiedad de Minecraft ni habilita la ejecución**. No se etiqueta como cuenta prémium.
+- **Horas jugadas:** aparecen como `—` hasta que se implemente el registro de sesiones de juego; no se inventan estadísticas.
+- **RAM:** se guarda por modpack (2 a 16 GB); todavía falta conectarla al proceso de Minecraft cuando se integre el motor Java.
+- **Discord:** [Invitación Umbral](https://discord.gg/PFMEcJ3Hq4).
 
-El SHA-256 debe corresponder al contenido real descargado. Cada archivo debe distribuirse con autorización de su autor. La sincronización **no instala Minecraft ni Java** y no elimina automáticamente archivos no incluidos en el manifiesto.
+## Inicio de sesión Microsoft para la administración
 
-## Próximas tareas
+Registra una aplicación de tipo cliente público con cuentas personales Microsoft y URI `http://localhost`, y solicita autorización para Minecraft Services. En GitHub **Settings → Secrets and variables → Actions → Variables**, crea `UMBRAL_MICROSOFT_CLIENT_ID` con el ID público de la aplicación. El workflow lo incrusta durante la compilación, sin pedirlo a cada miembro.
 
-1. Motor de Minecraft Java y autenticación Microsoft oficial.
-2. Instalación automática de Java, Minecraft y cargadores.
-3. Portadas, skin real y catálogo de modpacks.
-4. Integrar ZIPs/exportaciones de CurseForge respetando licencias.
-5. Pruebas completas de instalación y ejecución en Windows.
+No se deben subir tokens, contraseñas ni secretos al repositorio. Si Microsoft no autoriza la aplicación, no existe un modo legítimo de saltar esa autorización.
 
-## Inicio de sesión directo Microsoft (v0.9.0)
+## Trabajo pendiente antes de publicar una versión final
 
-Se ha implementado OAuth 2.0 Authorization Code + PKCE con navegador oficial de Microsoft y retorno automático a la aplicación. Ya no se necesita introducir códigos de dispositivo ni el Client ID en cada PC. Una vez validado el perfil de Minecraft Java, se muestra el nombre y la cabeza de la skin con su UUID. El inicio de Minecraft con JUGAR sigue pendiente.
+- Integrar y probar Java Runtime, instalación de Minecraft y cargadores Forge/Fabric/NeoForge/Quilt.
+- Probar autenticación de Minecraft Services y renovación de tokens.
+- Conectar **JUGAR** con ejecución real, verificación de archivos y la RAM elegida.
+- Medir horas desde procesos reales de juego, y mostrar conteo de mods procedente del manifiesto.
+- Sustituir el fondo provisional por recursos de alta calidad autorizados y validar el diseño en diferentes resoluciones.
+- Probar en Windows 10/11, instalador, antivirus/SmartScreen y sincronización real de un modpack.
 
-**Configuración obligatoria del administrador (una sola vez):** registrar una aplicación pública en Microsoft Entra con soporte para **cuentas personales de Microsoft**, agregar el redirect URI `http://localhost` bajo *Mobile and desktop applications*, y conseguir autorización para Minecraft Services. Configurar la variable de repositorio de GitHub Actions `UMBRAL_MICROSOFT_CLIENT_ID` con el Application (client) ID de esa aplicación. El workflow incrusta el ID público en `src/microsoft-app.json` al compilar, sin pedir datos a los jugadores. Si la variable no está configurada, la aplicación muestra un error informativo en lugar de simular que la sesión funciona.
-
-No se almacenan contraseñas. Los tokens de actualización se guardan cifrados cuando Electron safeStorage está disponible. **No se ha realizado una prueba de autenticación de extremo a extremo:** un client ID sin la autorización necesaria puede recibir HTTP 403 de Minecraft Services. No usar credenciales de otra aplicación ni eludir controles de Microsoft.
+Este proyecto no es un producto oficial de Minecraft ni está afiliado con Mojang o Microsoft.
