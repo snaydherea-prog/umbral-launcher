@@ -1,101 +1,141 @@
 'use strict';
-let state=null, syncing=false;
+let state=null,catalog=null,syncing=false,minecraftUser=null,guestName='';
 const $=id=>document.getElementById(id);
 const current=()=>state?.packs.find(p=>p.id===state.selectedId)||state?.packs[0];
-const notice=text=>{$('status').textContent=text;$('notice').textContent=text};
+const detail=()=>catalog?.modpacks.find(x=>x.id===current()?.remoteId);
+function notice(message){$('status').textContent=message;$('notice').textContent=message}
 function show(name){
  document.querySelectorAll('section.view').forEach(el=>el.classList.toggle('hidden',el.id!==name));
- document.querySelectorAll('button.nav[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name));
+ document.querySelectorAll('.nav[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name));
 }
-function render(){
- const p=current();if(!p)return;
- $('currentName').textContent=p.name;$('packCount').textContent=state.packs.length+' modpack(s)';
- $('name').value=p.name;$('mc').value=p.mcVersion;$('loader').value=p.loaderType;
- $('manifest').value=p.manifestUrl||'';$('ram').value=p.memoryGB||6;$('ramPack').value=p.memoryGB||6;
- const cards=$('packCards');cards.replaceChildren();
- for(const pack of state.packs){
-  const b=document.createElement('button');b.className='packcard'+(pack.id===state.selectedId?' selected':'');
-  const symbol=document.createElement('div');symbol.className='newsicon';symbol.textContent='⬡';
-  const title=document.createElement('strong');title.textContent=pack.name;
-  const extra=document.createElement('small');extra.textContent=pack.mcVersion+' · '+pack.loaderType+(pack.manifestUrl?' · Sincronizable':' · Sin configurar');
-  b.append(symbol,title,extra);b.addEventListener('click',async()=>{
-   state.selectedId=pack.id;try{await persist();render();show('home')}catch(e){notice('Error: '+e.message)}
-  });cards.append(b);
+function setAccount(){
+ const avatar=$('avatar');avatar.replaceChildren();
+ if(minecraftUser&&/^[0-9a-f]{32}$/i.test(minecraftUser.uuid)){
+  const image=document.createElement('img');image.alt='Cabeza de la skin de '+minecraftUser.username;
+  image.src='https://crafatar.com/avatars/'+minecraftUser.uuid+'?size=64&overlay';
+  image.onerror=()=>{avatar.replaceChildren();avatar.textContent='U'};
+  avatar.append(image);
+  $('playerName').textContent=minecraftUser.username;
+  $('accountType').textContent='Minecraft Java verificado';
+  $('profileType').textContent='Prémium verificado';
+  $('account').textContent='Cuenta conectada';
+ }else if(guestName){
+  avatar.textContent=guestName.slice(0,1).toUpperCase();
+  $('playerName').textContent=guestName;$('accountType').textContent='Perfil local no verificado';
+  $('profileType').textContent='Sin autenticar';$('account').textContent='Conectar Microsoft';
+ }else{
+  avatar.textContent='U';$('playerName').textContent='Sin iniciar sesión';
+  $('accountType').textContent='No conectado';$('profileType').textContent='Sin verificar';
+  $('account').textContent='Conectar Microsoft';
  }
 }
-async function persist(){state=await window.umbral.save(state);}
-function capture(){
- const p=current();p.name=$('name').value.trim();p.mcVersion=$('mc').value.trim();
- p.loaderType=$('loader').value;p.manifestUrl=$('manifest').value.trim();
- p.memoryGB=String($('ramPack').value);
+function packCard(pack){
+ const b=document.createElement('button');b.className='packcard'+(pack.id===state.selectedId?' selected':'');
+ const symbol=document.createElement('div');symbol.className='newsicon';symbol.textContent='⬡';
+ const title=document.createElement('strong');title.textContent=pack.name;
+ const remote=catalog?.modpacks.find(x=>x.id===pack.remoteId);
+ const extra=document.createElement('small');
+ extra.textContent=(remote?.minecraftVersion||pack.mcVersion)+' · '+(remote?.loader||pack.loaderType)+' · '+(remote?.published?'Publicado':'Próximamente');
+ b.append(symbol,title,extra);
+ b.addEventListener('click',async()=>{
+  state.selectedId=pack.id;
+  try{await persist();render();show('home')}catch(e){notice('No se pudo seleccionar: '+e.message)}
+ });
+ return b;
+}
+function render(){
+ const p=current();if(!p)return;const remote=detail();
+ $('currentName').textContent=remote?.name||p.name;
+ $('packCount').textContent=(catalog?.modpacks.length||state.packs.length)+' modpack(s)';
+ $('packVersion').textContent=remote?.version||'Sin publicar';
+ $('modsCount').textContent=Number.isInteger(remote?.modsCount)?String(remote.modsCount):'—';
+ $('hoursPlayed').textContent='—';
+ $('announcement').textContent=catalog?.announcement||'✧ Tu aventura comienza aquí';
+ $('ram').value=p.memoryGB||6;
+ $('offlineName').value=guestName;
+ $('update').disabled=!remote?.published||!remote?.manifestUrl||syncing;
+ $('repair').disabled=$('update').disabled;
+ $('update').textContent=remote?.published?'↻ DESCARGAR / ACTUALIZAR':'Próximamente';
+ for(const id of ['packCards','officialPacks']){
+  const cards=$(id);cards.replaceChildren();
+  state.packs.filter(x=>!!catalog?.modpacks.find(r=>r.id===x.remoteId)).forEach(x=>cards.append(packCard(x)));
+ }
+}
+async function persist(){state=await window.umbral.save(state)}
+async function updateCatalog(){
+ const fresh=await window.umbral.catalog();catalog=fresh;
+ // The GitHub catalog is the only authority for pack metadata. Players can change RAM.
+ for(const pack of catalog.modpacks){
+  let existing=state.packs.find(p=>p.remoteId===pack.id);
+  if(!existing&&pack.id==='keo-rpg-optimized')existing=state.packs.find(p=>p.name==='KEO RPG Optimized'&&!p.remoteId);
+  if(!existing){
+   existing={id:crypto.randomUUID(),name:pack.name,remoteId:pack.id,mcVersion:pack.minecraftVersion||'1.20.1',loaderType:pack.loader||'forge',memoryGB:'6',manifestUrl:''};
+   state.packs.push(existing);
+  }
+  existing.remoteId=pack.id;
+  existing.name=pack.name;
+  existing.mcVersion=pack.minecraftVersion||'1.20.1';
+  existing.loaderType=pack.loader||'forge';
+  existing.manifestUrl=''; // The main process always uses the URL from the administrator's catalog.
+ }
+ await persist();render();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
 document.querySelectorAll('[data-win]').forEach(b=>b.addEventListener('click',()=>window.umbral.window(b.dataset.win)));
 $('quit').addEventListener('click',()=>window.umbral.window('close'));
-let minecraftUser=null;
-function showProfile(profile){
- minecraftUser=profile||null;
- const avatar=$('avatar');avatar.replaceChildren();
- if(profile&&/^[0-9a-f]{32}$/i.test(profile.uuid)){
-  const image=document.createElement('img');
-  image.alt='Cabeza de skin de '+profile.username;
-  image.src='https://crafatar.com/avatars/'+profile.uuid+'?size=64&overlay';
-  image.onerror=()=>{avatar.replaceChildren();avatar.textContent='U'};
-  avatar.append(image);
-  $('playerName').textContent=profile.username;
-  $('account').textContent='Conectado';
- }else{
-  avatar.textContent='U';$('playerName').textContent='Sin iniciar sesión';$('account').textContent='Conectar Microsoft';
- }
-}
+$('discord').addEventListener('click',()=>window.umbral.discord().catch(e=>notice('Discord: '+e.message)));
 $('account').addEventListener('click',async()=>{
  if(minecraftUser){show('settings');notice('La cuenta está conectada. Puedes cerrar sesión desde Ajustes.');return}
-
- $('account').disabled=true;$('authCode').textContent='';$('authDialog').classList.remove('hidden');
- $('authInstructions').textContent='Abriendo Microsoft en el navegador. Copia el código cuando aparezca.';
+ $('account').disabled=true;$('authDialog').classList.remove('hidden');
+ $('authInstructions').textContent='Se abrirá el navegador oficial de Microsoft. Regresa al launcher cuando termines.';
  try{
-  const profile=await window.umbral.login();showProfile(profile);
-  $('authDialog').classList.add('hidden');notice('Conectado como '+profile.username);
- }catch(e){$('authInstructions').textContent='Error: '+e.message;notice('Error de Microsoft: '+e.message)}
+  const profile=await window.umbral.login();minecraftUser=profile;guestName='';localStorage.removeItem('umbral-guest-name');
+  setAccount();$('authDialog').classList.add('hidden');notice('Minecraft Java conectado: '+profile.username);
+ }catch(e){$('authInstructions').textContent='No se pudo completar el inicio de sesión: '+e.message;notice('Microsoft: '+e.message)}
  finally{$('account').disabled=false}
 });
 $('closeAuthDialog').addEventListener('click',()=>$('authDialog').classList.add('hidden'));
-$('copyAuthCode').addEventListener('click',async()=>{
- try{await navigator.clipboard.writeText($('authCode').textContent);notice('Código copiado al portapapeles')}
- catch{notice('Selecciona el código mostrado y cópialo manualmente')}
+$('copyAuthCode').addEventListener('click',()=>{});
+$('logout').addEventListener('click',async()=>{await window.umbral.logout();minecraftUser=null;setAccount();notice('Sesión de Microsoft cerrada.')});
+$('localProfile').addEventListener('click',()=>{
+ const name=$('offlineName').value.trim();
+ if(!/^[A-Za-z0-9_]{3,16}$/.test(name)){notice('Usa un nombre de 3 a 16 caracteres: letras, números o _.');return}
+ guestName=name;localStorage.setItem('umbral-guest-name',name);
+ if(minecraftUser)notice('La cuenta Microsoft verificada sigue activa. Cierra sesión primero para utilizar el perfil local.');
+ else{setAccount();notice('Perfil local guardado. No es una cuenta de Minecraft verificada ni desbloquea el juego.')}
 });
-$('logout').addEventListener('click',async()=>{await window.umbral.logout();showProfile(null);notice('Sesión de Minecraft cerrada')});
 window.umbral.onAuth(event=>{
- if(event.type==='code'){$('authDialog').classList.remove('hidden');$('authCode').textContent=event.code;$('authInstructions').textContent='Introduce este código en la página oficial de Microsoft que se ha abierto.'}
- if(event.type==='status'){$('authInstructions').textContent=event.message}
- if(event.type==='profile')showProfile(event.profile);
+ if(event.type==='status')$('authInstructions').textContent=event.message;
+ if(event.type==='profile'){minecraftUser=event.profile;setAccount()}
 });
-$('play').addEventListener('click',()=>notice('El inicio de Minecraft está pendiente: primero hay que validar Microsoft y el motor del juego.'));
-$('update').addEventListener('click',async()=>{
- if(syncing)return;syncing=true;$('update').disabled=true;
- try{notice('Comprobando archivos del modpack...');await window.umbral.sync(current().id);notice('Actualización completada. Inicio de Minecraft aún pendiente.')}
- catch(e){notice('Error: '+e.message)}finally{syncing=false;$('update').disabled=false}
-});
-$('save').addEventListener('click',async()=>{
- try{capture();await persist();render();show('home');notice('Configuración guardada.')}
- catch(e){notice('Error: '+e.message)}
-});
-async function newPack(){
- state.packs.push({id:crypto.randomUUID(),name:'Nuevo modpack',manifestUrl:'',mcVersion:'1.20.1',loaderType:'forge',memoryGB:'6'});
- state.selectedId=state.packs.at(-1).id;await persist();render();show('packs');
+$('play').addEventListener('click',()=>notice('JUGAR todavía no está habilitado: faltan la instalación de Java, Minecraft y el motor de ejecución. No se ha iniciado ningún juego.'));
+async function sync(){
+ if(syncing)return;
+ syncing=true;$('update').disabled=true;$('repair').disabled=true;
+ try{
+  notice('Comprobando archivos firmados por SHA-256...');
+  const result=await window.umbral.sync(current().id);
+  notice('Archivos verificados: '+result.files+'. La ejecución de Minecraft aún no está disponible.');
+ }catch(e){notice('Error de sincronización: '+e.message)}
+ finally{syncing=false;render()}
 }
-$('new').addEventListener('click',()=>newPack().catch(e=>notice('Error: '+e.message)));
-$('libraryNew').addEventListener('click',()=>newPack().catch(e=>notice('Error: '+e.message)));
-$('folder').addEventListener('click',()=>window.umbral.openFolder(current().id).catch(e=>notice('Error: '+e.message)));
+$('update').addEventListener('click',sync);
+$('repair').addEventListener('click',sync);
 $('saveSettings').addEventListener('click',async()=>{
- current().memoryGB=String($('ram').value);
- try{await persist();render();notice('Ajustes guardados.')}catch(e){notice('Error: '+e.message)}
+ const ram=Number($('ram').value);
+ if(!Number.isInteger(ram)||ram<2||ram>16){notice('Selecciona entre 2 y 16 GB de RAM.');return}
+ current().memoryGB=String(ram);
+ try{await persist();render();notice('RAM guardada para '+current().name+': '+ram+' GB. Se aplicará cuando terminemos el motor de juego.')}
+ catch(e){notice('Error al guardar RAM: '+e.message)}
 });
-window.umbral.onProgress(p=>{
- if(p.message)notice(p.message);
- $('bar').style.width=Math.max(0,Math.min(100,Number(p.percent)||0))+'%';
-});
-window.umbral.profile().then(result=>{
- if(result)showProfile(result.profile)
-}).catch(e=>notice('No se pudo cargar la cuenta: '+e.message));
-window.umbral.settings().then(s=>{state=s;render();notice('Umbral preparado. Selecciona un modpack.');}).catch(e=>notice('Error: '+e.message));
+$('folder').addEventListener('click',()=>window.umbral.openFolder(current().id).catch(e=>notice(e.message)));
+window.umbral.onProgress(p=>{if(p.message)notice(p.message);$('bar').style.width=Math.max(0,Math.min(100,Number(p.percent)||0))+'%'});
+async function boot(){
+ guestName=localStorage.getItem('umbral-guest-name')||'';
+ state=await window.umbral.settings();
+ try{await updateCatalog()}catch(e){notice('No se pudo consultar el catálogo: '+e.message);render()}
+ try{const result=await window.umbral.profile();if(result?.profile)minecraftUser=result.profile}
+ catch(e){notice('Error de cuenta: '+e.message)}
+ setAccount();
+}
+boot().catch(e=>notice('Error de Umbral: '+e.message));
