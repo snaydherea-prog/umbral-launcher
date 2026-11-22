@@ -70,6 +70,25 @@ async function sync(id){
    }finally{try{fs.unlinkSync(temporary)}catch{}}
    emit('Descargado: '+relative,Math.round((i+1)/manifest.files.length*100));
   }
+  // Only files previously downloaded and tracked by Umbral may be removed.
+  // Never touch user worlds, screenshots, account data or unrelated files.
+  const ledgerPath=path.join(root,'.umbral-managed.json');
+  let prior=[];
+  try{const data=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));if(Array.isArray(data.files))prior=data.files}catch{}
+  const managed=new Set(manifest.files.map(f=>safeRelative(f.path)));
+  for(const old of prior){
+   try{
+    const name=safeRelative(old.path);
+    if(managed.has(name)||!/^[a-f0-9]{64}$/i.test(old.sha256))continue;
+    if(!/^(mods|config|defaultconfigs|resourcepacks|shaderpacks|kubejs)\\//.test(name))continue;
+    const destination=path.join(root,...name.split('/'));
+    if(fs.existsSync(destination)&&fs.lstatSync(destination).isFile()&&await hashFile(destination)===old.sha256.toLowerCase()){
+     fs.unlinkSync(destination);
+     emit('Retirado archivo obsoleto: '+name,100);
+    }
+   }catch{} // Preserve files on errors, rather than deleting uncertain content.
+  }
+  fs.writeFileSync(ledgerPath,JSON.stringify({version:String(manifest.version||''),files:manifest.files.map(f=>({path:f.path,sha256:f.sha256.toLowerCase()}))},null,2));
   emit('Sincronización terminada',100);return {ok:true,files:manifest.files.length};
  }finally{working=false}
 }
