@@ -1,4 +1,4 @@
-# Umbral Launcher — 1.0.0-preview
+# Umbral Launcher — 1.0.0-preview.3
 
 Aplicación **Electron para Windows** de la comunidad Umbral. Diseño oscuro inspirado en el mockup proporcionado por el administrador, con biblioteca, Discord, perfil, estadísticas y sincronización de archivos.
 
@@ -6,7 +6,7 @@ Aplicación **Electron para Windows** de la comunidad Umbral. Diseño oscuro ins
 
 ## Instalador de Windows
 
-GitHub Actions compila un instalador NSIS y un ejecutable portátil con Electron Builder. Abre la pestaña **Actions**, elige la ejecución verde más reciente y descarga el artefacto `Umbral-Launcher-Windows`. No necesitas Node.js en las computadoras de tus miembros.
+GitHub Actions compila un instalador NSIS (`Umbral-Launcher-Setup-…exe`) y un ejecutable portátil (`Umbral-Launcher-Portable-…exe`) con nombres distintos. Abre la pestaña **Actions**, elige la ejecución verde más reciente y descarga el artefacto `Umbral-Launcher-Windows`. No necesitas Node.js en las computadoras de tus miembros. La compilación comprueba que ambos ejecutables existen y que el Client ID está incluido en la aplicación empaquetada.
 
 ## Catálogo administrado (solo administrador)
 
@@ -33,7 +33,9 @@ No redistribuyas mods ni archivos de Minecraft sin verificar los permisos de sus
 
 ## Inicio de sesión Microsoft para la administración
 
-Registra una aplicación de tipo cliente público con cuentas personales Microsoft y URI `http://localhost`, y solicita autorización para Minecraft Services. En GitHub **Settings → Secrets and variables → Actions → Variables**, crea `UMBRAL_MICROSOFT_CLIENT_ID` con el ID público de la aplicación. El workflow lo incrusta durante la compilación, sin pedirlo a cada miembro.
+Umbral Launcher está registrada como cliente público para cuentas personales de Microsoft, con URI `http://localhost`. Su Client ID público es `3edb800a-c582-4709-ab16-3536aa83563b` y está incluido en `src/microsoft-app.json`; no es un secreto. La autorización de Minecraft Services y la prueba de inicio de sesión con una cuenta real siguen pendientes.
+
+La compilación usa ese archivo de configuración. Opcionalmente, la variable de repositorio `UMBRAL_MICROSOFT_CLIENT_ID` en **Settings → Secrets and variables → Actions → Variables** permite sustituirlo. Una variable ausente no borra el ID del proyecto y un ID inválido detiene la compilación. Los miembros no necesitan configurar el ID.
 
 No se deben subir tokens, contraseñas ni secretos al repositorio. Si Microsoft no autoriza la aplicación, no existe un modo legítimo de saltar esa autorización.
 

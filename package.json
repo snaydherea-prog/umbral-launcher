@@ -1,6 +1,6 @@
 {
   "name": "umbral-launcher",
-  "version": "1.0.0-preview.2",
+  "version": "1.0.0-preview.3",
   "private": true,
   "description": "Launcher de escritorio para la comunidad Umbral",
   "main": "src/main.js",
@@ -32,8 +32,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "artifactName": "Umbral-Launcher-Setup-${version}-${arch}.${ext}"
     },
-    "artifactName": "Umbral-Launcher-${version}-${arch}.${ext}"
+    "portable": {
+      "artifactName": "Umbral-Launcher-Portable-${version}-${arch}.${ext}"
+    }
   }
 }

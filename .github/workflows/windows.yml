@@ -23,18 +23,45 @@ jobs:
       - name: Instalar dependencias
         run: npm install --no-audit --no-fund
       - name: Configurar identidad Microsoft de Umbral
-        shell: pwsh
+        shell: bash
         env:
           UMBRAL_CLIENT_ID: ${{ vars.UMBRAL_MICROSOFT_CLIENT_ID }}
         run: |
-          $config = @{ clientId = $env:UMBRAL_CLIENT_ID } | ConvertTo-Json
-          Set-Content -Path 'src/microsoft-app.json' -Value $config -Encoding utf8
+          node <<'NODE'
+          const fs = require('node:fs');
+          const configPath = 'src/microsoft-app.json';
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          const clientId = (process.env.UMBRAL_CLIENT_ID || config.clientId || '').trim();
+          if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(clientId)) {
+            throw new Error('Falta un Client ID de Microsoft válido.');
+          }
+          fs.writeFileSync(configPath, JSON.stringify({ clientId }, null, 2) + '\n');
+          console.log('Microsoft Client ID configurado: ' + clientId);
+          NODE
       - name: Revisar JavaScript
         run: npm run check
       - name: Compilar para Windows
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run dist:win
+      - name: Verificar identidad y ejecutables empaquetados
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const asar = require('@electron/asar');
+          const expected = require('./src/microsoft-app.json');
+          const actual = JSON.parse(asar.extractFile('dist/win-unpacked/resources/app.asar', 'src/microsoft-app.json').toString('utf8'));
+          assert.equal(actual.clientId, expected.clientId);
+          const { version } = require('./package.json');
+          for (const target of ['Setup', 'Portable']) {
+            const file = `dist/Umbral-Launcher-${target}-${version}-x64.exe`;
+            assert.ok(fs.statSync(file).size > 0, 'Falta el ejecutable: ' + file);
+            console.log('Verificado: ' + file);
+          }
+          console.log('Client ID verificado dentro de app.asar: ' + actual.clientId);
+          NODE
       - name: Publicar artefactos
         uses: actions/upload-artifact@v4
         with:
