@@ -55,6 +55,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const assert = require('node:assert/strict');
+          const path = require('node:path');
           const asar = require('@electron/asar');
           const expected = require('./src/microsoft-app.json');
           const actual = JSON.parse(asar.extractFile('dist/win-unpacked/resources/app.asar', 'src/microsoft-app.json').toString('utf8'));
@@ -62,11 +63,10 @@ jobs:
           const distribution = JSON.parse(asar.extractFile('dist/win-unpacked/resources/app.asar', 'src/distribution.json').toString('utf8'));
           assert.equal(distribution.curseforgeApproved, require('./src/distribution.json').curseforgeApproved);
           for (const file of ['src/admin-renderer.js', 'src/pack-import.js', 'src/pack-sync.js', 'src/pack-publish.js', 'node_modules/yauzl/index.js', 'node_modules/yazl/index.js']) {
-            assert.ok(asar.extractFile('dist/win-unpacked/resources/app.asar', file).length > 0, 'Falta ' + file);
+            assert.ok(asar.extractFile('dist/win-unpacked/resources/app.asar', path.normalize(file)).length > 0, 'Falta ' + file);
           }
           // Load packaged modules in isolation so missing transitive dependencies fail here.
           const os = require('node:os');
-          const path = require('node:path');
           const smoke = fs.mkdtempSync(path.join(os.tmpdir(), 'umbral-package-'));
           try {
             asar.extractAll('dist/win-unpacked/resources/app.asar', smoke);
