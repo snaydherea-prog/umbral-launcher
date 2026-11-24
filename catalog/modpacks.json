@@ -11,7 +11,7 @@
       "version": "Sin publicar",
       "minecraftVersion": "1.21.1",
       "loader": "neoforge",
-      "loaderVersion": "",
+      "loaderVersion": "21.1.248",
       "javaMajor": 21,
       "manifestUrl": "",
       "featured": true,
@@ -26,8 +26,11 @@
         "author": "gokukeo",
         "projectUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized",
         "fileUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/files/8897580",
-        "licenseUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/license"
-      }
+        "licenseUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/license",
+        "manifestVersion": "7.0.0",
+        "archiveSha256": "e94b86457496ff403848f484b3a3c8202488c928d7030e25b300e7123c23484e"
+      },
+      "modsCount": 273
     }
   ]
 }

@@ -1,17 +1,23 @@
 {
   "name": "umbral-launcher",
-  "version": "1.0.0-preview.3",
+  "version": "1.0.0-preview.4",
   "private": true,
   "description": "Launcher de escritorio para la comunidad Umbral",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/auth.js",
+    "check": "node tools/check.mjs",
+    "test": "node --test test/*.test.js",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never"
+  },
+  "dependencies": {
+    "yauzl": "3.4.0",
+    "yazl": "3.3.1"
   },
   "devDependencies": {
     "electron": "^33.4.11",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "jsdom": "26.1.0"
   },
   "build": {
     "appId": "com.umbral.launcher",

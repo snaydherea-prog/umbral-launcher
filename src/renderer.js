@@ -69,13 +69,13 @@ async function updateCatalog(){
   let existing=state.packs.find(p=>p.remoteId===pack.id);
   if(!existing&&pack.id==='keo-rpg-optimized')existing=state.packs.find(p=>p.name==='KEO RPG Optimized'&&!p.remoteId);
   if(!existing){
-   existing={id:crypto.randomUUID(),name:pack.name,remoteId:pack.id,mcVersion:pack.minecraftVersion||'1.20.1',loaderType:pack.loader||'forge',memoryGB:'6',manifestUrl:''};
+   existing={id:crypto.randomUUID(),name:pack.name,remoteId:pack.id,mcVersion:pack.minecraftVersion||'1.21.1',loaderType:pack.loader||'neoforge',memoryGB:'6',manifestUrl:''};
    state.packs.push(existing);
   }
   existing.remoteId=pack.id;
   existing.name=pack.name;
-  existing.mcVersion=pack.minecraftVersion||'1.20.1';
-  existing.loaderType=pack.loader||'forge';
+  existing.mcVersion=pack.minecraftVersion||'1.21.1';
+  existing.loaderType=pack.loader||'neoforge';
   existing.manifestUrl=''; // The main process always uses the URL from the administrator's catalog.
  }
  await persist();render();
@@ -113,14 +113,16 @@ async function sync(){
  if(syncing)return;
  syncing=true;$('update').disabled=true;$('repair').disabled=true;
  try{
-  notice('Comprobando archivos firmados por SHA-256...');
+  notice('Comprobando integridad de los archivos...');
   const result=await window.umbral.sync(current().id);
-  notice('Archivos verificados: '+result.files+'. La ejecución de Minecraft aún no está disponible.');
+  notice('Archivos verificados: '+result.files+'. Actualizados: '+result.downloaded+'.'+(result.retained?.length?' Hay '+result.retained.length+' archivos antiguos modificados que se conservaron.':'')+' La ejecución de Minecraft aún no está disponible.');
  }catch(e){notice('Error de sincronización: '+e.message)}
  finally{syncing=false;render()}
 }
 $('update').addEventListener('click',sync);
 $('repair').addEventListener('click',sync);
+$('refreshCatalog').addEventListener('click',()=>updateCatalog().then(()=>notice('Catálogo actualizado.')).catch(e=>notice(e.message)));
+window.addEventListener('umbral:published',()=>updateCatalog().catch(e=>notice(e.message)));
 $('saveSettings').addEventListener('click',async()=>{
  const ram=Number($('ram').value);
  if(!Number.isInteger(ram)||ram<2||ram>16){notice('Selecciona entre 2 y 16 GB de RAM.');return}

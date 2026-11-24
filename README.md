@@ -1,4 +1,4 @@
-# Umbral Launcher — 1.0.0-preview.3
+# Umbral Launcher — 1.0.0-preview.4
 
 Aplicación **Electron para Windows** de la comunidad Umbral. Diseño oscuro inspirado en el mockup proporcionado por el administrador, con biblioteca, Discord, perfil, estadísticas y sincronización de archivos.
 
@@ -8,20 +8,19 @@ Aplicación **Electron para Windows** de la comunidad Umbral. Diseño oscuro ins
 
 GitHub Actions compila un instalador NSIS (`Umbral-Launcher-Setup-…exe`) y un ejecutable portátil (`Umbral-Launcher-Portable-…exe`) con nombres distintos. Abre la pestaña **Actions**, elige la ejecución verde más reciente y descarga el artefacto `Umbral-Launcher-Windows`. No necesitas Node.js en las computadoras de tus miembros. La compilación comprueba que ambos ejecutables existen y que el Client ID está incluido en la aplicación empaquetada.
 
-## Catálogo administrado (solo administrador)
+## Administración de modpacks
 
-El catálogo público está en [catalog/modpacks.json](catalog/modpacks.json). **Los miembros no pueden publicar modpacks desde el launcher.** Solo los colaboradores con permisos de escritura en GitHub pueden modificar ese archivo.
+La versión preview.4 añade **Ajustes → Administrar Umbral**. Puedes importar un ZIP de CurseForge, revisar su versión de Minecraft y cargador, y guardar borradores. También admite carpetas de modpacks cuyos archivos tengas permiso de distribuir.
 
-Para publicar:
+Para publicar se verifica la cuenta GitHub **snaydherea-prog** (ID 322669037) y su permiso de escritura en este repositorio. El administrador conecta un token limitado a este repositorio con **Contents: lectura y escritura**. El token se mantiene solo durante la sesión, no se guarda ni se incluye en los instaladores. No pegues tokens en chats o archivos del proyecto.
 
-1. Prepara un modpack compatible con Minecraft y su cargador (Forge/Fabric/NeoForge/Quilt).
-2. Hospeda los archivos autorizados en enlaces HTTPS con descargas directas.
-3. En una computadora de administración, ejecuta `node tools/generar-manifiesto.mjs "C:\\ruta\\modpack" "https://ejemplo.com/archivos" "1.0.0"` para generar `manifest.json`. Se incluyen `mods`, `config`, `defaultconfigs`, `resourcepacks`, `shaderpacks` y `kubejs`.
-4. Sube el manifiesto a un lugar público HTTPS y comprueba que cada URL de archivo coincide con el archivo real.
-5. Edita `catalog/modpacks.json`: completa `manifestUrl`, `minecraftVersion`, `loader`, `loaderVersion`, `version` y establece `published: true`.
-6. Los usuarios abren el launcher y seleccionan **DESCARGAR / ACTUALIZAR**. El sistema verifica hashes SHA-256. Los archivos obsoletos gestionados por Umbral se retiran si no han sido modificados. Nunca se deben incluir mundos, datos de cuenta ni archivos personales en el manifiesto.
+La publicación prepara paquetes de archivos por carpeta, los sube a una release en borrador, verifica las cargas y actualiza el catálogo al final. Los jugadores solo leen el catálogo y descargan. Las actualizaciones comprueban hashes antes de cambiar la instalación, conservan options.txt y guardan copias de los archivos sustituidos o retirados. Los mundos, capturas y datos de cuenta no se gestionan como archivos de modpack.
 
-No redistribuyas mods ni archivos de Minecraft sin verificar los permisos de sus autores. Las referencias a archivos de Minecraft deben obtenerse de fuentes autorizadas.
+**KEO RPG Optimized:** el ZIP revisado usa Minecraft 1.21.1, NeoForge 21.1.248 y Java 21. Su lista contiene 273 mods, 13 paquetes de recursos y 9 shaders referenciados en CurseForge. La página llama a la descarga 7.0.1; el manifest.json interno indica 7.0.0. Se conserva esa diferencia en la ficha de origen. La importación prepara 9.260 archivos y mantiene las 295 referencias externas pendientes: el ZIP no contiene esos mods como archivos JAR.
+
+**La integración de descargas de CurseForge sigue desactivada.** Necesitamos aprobación para Umbral y confirmar con Overwolf el método de distribución y almacenamiento de metadatos. La clave API no debe compartirse con jugadores. Un borrador con referencias pendientes no se puede publicar. Tener un ZIP exportado no prueba que todas sus dependencias admitan descarga por otros launchers.
+
+Consulta [la guía de administración](docs/ADMINISTRACION.md) y [el borrador de solicitud a CurseForge](docs/CURSEFORGE-REQUEST.md). El catálogo mantiene KEO sin publicar hasta completar las descargas y las pruebas.
 
 ## Cuentas y perfiles
 

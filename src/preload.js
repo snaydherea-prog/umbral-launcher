@@ -1,5 +1,14 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('umbral',{
+  adminStatus:()=>ipcRenderer.invoke('admin:status'),
+  adminConnect:token=>ipcRenderer.invoke('admin:connect',token),
+  adminDisconnect:()=>ipcRenderer.invoke('admin:disconnect'),
+  importZip:()=>ipcRenderer.invoke('admin:importZip'),
+  importFolder:metadata=>ipcRenderer.invoke('admin:importFolder',metadata),
+  resolveDraft:(id,key)=>ipcRenderer.invoke('admin:resolve',{id,key}),
+  publishDraft:(id,fields)=>ipcRenderer.invoke('admin:publish',{id,fields}),
+  openDraft:id=>ipcRenderer.invoke('admin:openDraft',id),
+  onAdminProgress:fn=>{const h=(_e,p)=>fn(p);ipcRenderer.on('admin:progress',h);return()=>ipcRenderer.removeListener('admin:progress',h)},
   profile:()=>ipcRenderer.invoke('auth:profile'),
   login:(clientId)=>ipcRenderer.invoke('auth:login',clientId),
   logout:()=>ipcRenderer.invoke('auth:logout'),

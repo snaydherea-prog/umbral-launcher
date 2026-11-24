@@ -1,0 +1,16 @@
+[
+  {
+    "name": "KEO RPG Optimized",
+    "archiveSha256": "e94b86457496ff403848f484b3a3c8202488c928d7030e25b300e7123c23484e",
+    "source": {
+      "provider": "curseforge",
+      "projectId": 1500914,
+      "fileId": 8897580,
+      "version": "7.0.1",
+      "author": "gokukeo",
+      "projectUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized",
+      "fileUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/files/8897580",
+      "licenseUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/license"
+    }
+  }
+]
