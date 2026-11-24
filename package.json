@@ -8,7 +8,8 @@
     "start": "electron .",
     "check": "node tools/check.mjs",
     "test": "node --test test/*.test.js",
-    "dist:win": "electron-builder --win nsis portable --x64 --publish never"
+    "stage:app": "node tools/stage-app.mjs",
+    "dist:win": "npm run stage:app && electron-builder --win nsis portable --x64 --publish never"
   },
   "dependencies": {
     "yauzl": "3.4.0",
@@ -23,6 +24,7 @@
     "appId": "com.umbral.launcher",
     "productName": "Umbral Launcher",
     "directories": {
+      "app": "build/app",
       "output": "dist"
     },
     "files": [
