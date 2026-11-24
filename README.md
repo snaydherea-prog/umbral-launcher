@@ -20,7 +20,7 @@ La publicación prepara paquetes de archivos por carpeta, los sube a una release
 
 **La integración de descargas de CurseForge sigue desactivada.** Necesitamos aprobación para Umbral y confirmar con Overwolf el método de distribución y almacenamiento de metadatos. La clave API no debe compartirse con jugadores. Un borrador con referencias pendientes no se puede publicar. Tener un ZIP exportado no prueba que todas sus dependencias admitan descarga por otros launchers.
 
-Consulta [la guía de administración](docs/ADMINISTRACION.md) y [el borrador de solicitud a CurseForge](docs/CURSEFORGE-REQUEST.md). El catálogo mantiene KEO sin publicar hasta completar las descargas y las pruebas.
+Consulta [la guía de administración](docs/ADMINISTRACION.md) y [la solicitud enviada a CurseForge](docs/CURSEFORGE-REQUEST.md). El catálogo mantiene KEO sin publicar hasta completar las descargas y las pruebas.
 
 ## Cuentas y perfiles
 
@@ -30,7 +30,7 @@ Consulta [la guía de administración](docs/ADMINISTRACION.md) y [el borrador de
 - **RAM:** se guarda por modpack (2 a 16 GB); todavía falta conectarla al proceso de Minecraft cuando se integre el motor Java.
 - **Discord:** [Invitación Umbral](https://discord.gg/PFMEcJ3Hq4).
 
-## Inicio de sesión Microsoft para la administración
+## Configuración del inicio de sesión Microsoft
 
 Umbral Launcher está registrada como cliente público para cuentas personales de Microsoft, con URI `http://localhost`. Su Client ID público es `3edb800a-c582-4709-ab16-3536aa83563b` y está incluido en `src/microsoft-app.json`; no es un secreto. La autorización de Minecraft Services y la prueba de inicio de sesión con una cuenta real siguen pendientes.
 
