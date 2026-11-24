@@ -7,16 +7,27 @@
     {
       "id": "keo-rpg-optimized",
       "name": "KEO RPG Optimized",
-      "description": "RPG y aventura. Pendiente de publicación del modpack modificado de Umbral.",
+      "description": "KEO RPG Optimized, de gokukeo. Seleccionado para Umbral; importación y pruebas pendientes.",
       "version": "Sin publicar",
-      "minecraftVersion": "1.20.1",
-      "loader": "forge",
+      "minecraftVersion": "1.21.1",
+      "loader": "neoforge",
       "loaderVersion": "",
-      "javaMajor": 17,
+      "javaMajor": 21,
       "manifestUrl": "",
       "featured": true,
       "published": false,
-      "news": []
+      "news": [],
+      "source": {
+        "provider": "curseforge",
+        "projectId": 1500914,
+        "fileId": 8897580,
+        "version": "7.0.1",
+        "fileName": "keo rpg -7.0.0.zip",
+        "author": "gokukeo",
+        "projectUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized",
+        "fileUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/files/8897580",
+        "licenseUrl": "https://www.curseforge.com/minecraft/modpacks/keo-rpg-optimized/license"
+      }
     }
   ]
 }
