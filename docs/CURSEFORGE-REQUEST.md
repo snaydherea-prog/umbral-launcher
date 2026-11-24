@@ -4,9 +4,11 @@ Este texto no se ha enviado. No se han aceptado términos de CurseForge ni se ha
 
 - Aplicación: Umbral Launcher
 - Repositorio: https://github.com/snaydherea-prog/umbral-launcher
-- Contacto propuesto: snaydherea@gmail.com, sujeto a autorización para compartirlo con Overwolf.
+- Contacto: se confirmará directamente con el administrador para el formulario de Overwolf.
 - Plataforma: Windows / Electron, proyecto comunitario independiente en desarrollo.
-- Tamaño de la comunidad y previsión de uso: por confirmar con el administrador; no inventar cifras.
+- Usuario exacto de Discord y planes de monetización: por confirmar con el administrador; son campos obligatorios del formulario.
+- Tamaño de la comunidad y previsión de uso: no se han declarado cifras.
+- Formulario oficial preparado, todavía sin enviar: https://forms.monday.com/forms/dce5ccb7afda9a1c21dab1a1aa1d84eb?r=use1
 
 ## Descripción propuesta
 
